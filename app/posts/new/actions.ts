@@ -7,7 +7,10 @@ import { authOptions } from "@/auth";
 
 export async function createPost(formData: FormData) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+
+  if (!session?.user?.id) {
+    console.error("Session or user ID missing:", session);
+
     throw new Error("You must be logged in to create a post");
   }
 
@@ -20,4 +23,4 @@ export async function createPost(formData: FormData) {
   });
 
   redirect("/posts");
-} 
+}

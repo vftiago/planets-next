@@ -1,7 +1,24 @@
 import CredentialsProvider from "next-auth/providers/credentials";
+import GitHubProvider from "next-auth/providers/github";
 import { type NextAuthOptions } from "next-auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+
+const getGithubProviderOptions = () => {
+  const gitHubConfig = {
+    clientId: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+  };
+
+  if (!gitHubConfig.clientId || !gitHubConfig.clientSecret) {
+    throw new Error("GitHub credentials are not set");
+  }
+
+  return {
+    clientId: gitHubConfig.clientId,
+    clientSecret: gitHubConfig.clientSecret,
+  };
+};
 
 export const authOptions = {
   providers: [
@@ -43,16 +60,48 @@ export const authOptions = {
         return user;
       },
     }),
+    GitHubProvider(getGithubProviderOptions()),
   ],
   pages: {
     signIn: "/login",
   },
   callbacks: {
-    async jwt({ token, user }) {
-      return { ...token, id: token.id ?? user?.id };
+    async signIn({ user, account }) {
+      if (account?.provider === "github") {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email as string },
+        });
+
+        if (!existingUser) {
+          await prisma.user.create({
+            data: {
+              name: user.name as string,
+              email: user.email as string,
+              password: "",
+            },
+          });
+        }
+      }
+      return true;
+    },
+    async jwt({ token, user, account }) {
+      if (user) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email as string },
+        });
+
+        if (dbUser) {
+          token.id = dbUser.id;
+        }
+      }
+      return token;
     },
     async session({ session, token }) {
-      return { ...session, user: { ...session.user, id: token.id } };
+      if (token && session.user) {
+        session.user.id = token.id as string;
+      }
+      return session;
     },
   },
+  debug: process.env.NODE_ENV === "development",
 } satisfies NextAuthOptions;

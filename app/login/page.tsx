@@ -19,7 +19,7 @@ export default function LoginPage() {
       });
 
       if (response?.error) {
-        setError("Invalid credentials");
+        setError(response?.error);
         return;
       }
 
@@ -38,6 +38,12 @@ export default function LoginPage() {
             Sign in to your account
           </h2>
         </div>
+        <button
+          onClick={() => signIn("google")}
+          className="mb-2 w-full bg-white text-gray-800 py-3 rounded-lg shadow-md hover:bg-gray-100"
+        >
+          Sign in with Google
+        </button>
         <button
           onClick={() => signIn("github")}
           className="mb-6 w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800"

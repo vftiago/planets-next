@@ -1,5 +1,6 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import GitHubProvider from "next-auth/providers/github";
+import GoogleProvider from "next-auth/providers/google";
 import { type NextAuthOptions } from "next-auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
@@ -17,6 +18,22 @@ const getGithubProviderOptions = () => {
   return {
     clientId: gitHubConfig.clientId,
     clientSecret: gitHubConfig.clientSecret,
+  };
+};
+
+const getGoogleProviderOptions = () => {
+  const googleConfig = {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  };
+
+  if (!googleConfig.clientId || !googleConfig.clientSecret) {
+    throw new Error("Google credentials are not set");
+  }
+
+  return {
+    clientId: googleConfig.clientId,
+    clientSecret: googleConfig.clientSecret,
   };
 };
 
@@ -48,6 +65,10 @@ export const authOptions = {
           });
         }
 
+        if (user && !user.password) {
+          throw new Error("Please sign in with an Auth provider.");
+        }
+
         const isCorrectPassword = await bcrypt.compare(
           credentials.password,
           user.password
@@ -61,6 +82,7 @@ export const authOptions = {
       },
     }),
     GitHubProvider(getGithubProviderOptions()),
+    GoogleProvider(getGoogleProviderOptions()),
   ],
   pages: {
     signIn: "/login",
